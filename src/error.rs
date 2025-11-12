@@ -40,6 +40,9 @@ pub enum SettlementError {
     
     #[error("Invalid trade data")]
     InvalidTradeData = 11,
+    
+    #[error("Invalid trade - price, qty, or notional mismatch")]
+    InvalidTrade = 12,
 }
 
 impl From<SettlementError> for ProgramError {
