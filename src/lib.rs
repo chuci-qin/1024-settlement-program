@@ -40,6 +40,6 @@ pub fn process_instruction(
 pub use error::SettlementError;
 pub use instruction::SettlementInstruction;
 pub use state::{
-    CompleteTrade, SettlementAccount, SettlementData, SettlementStatus, SettlementSummary, Side,
+    CompleteTrade, UserSettlement, SettlementSummary, Side,
 };
 
