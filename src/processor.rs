@@ -133,20 +133,29 @@ fn process_record_settlement(
         return Err(SettlementError::InsufficientLamports.into());
     }
     
-    // 创建settlement account - 直接分配空间和转账
-    msg!("Creating settlement account...");
+    // 创建settlement account - 使用create_account一次性创建
+    msg!("Creating settlement account with CPI...");
     
-    // 从authority转账lamports到settlement account
-    **authority.lamports.borrow_mut() -= required_lamports;
-    **settlement_account.lamports.borrow_mut() += required_lamports;
+    // 使用system_instruction::create_account
+    use solana_program::system_instruction;
     
-    // 分配空间并设置owner
-    settlement_account.realloc(serialized.len(), false)?;
-    settlement_account.assign(program_id);
+    let create_account_ix = system_instruction::create_account(
+        authority.key,
+        settlement_account.key,
+        required_lamports,
+        serialized.len() as u64,
+        program_id,
+    );
+    
+    // 使用invoke_signed，因为settlement_account是PDA
+    invoke_signed(
+        &create_account_ix,
+        &[authority.clone(), settlement_account.clone(), system_program.clone()],
+        &[&[b"settlement", &batch_hash[..32], &[bump]]],
+    )?;
     
     // 写入数据
-    let mut settlement_data = settlement_account.data.borrow_mut();
-    settlement_data.copy_from_slice(&serialized);
+    settlement_account.try_borrow_mut_data()?.copy_from_slice(&serialized);
     
     msg!("✅ Settlement recorded successfully!");
     msg!("   Batch: {}", account_data.data.batch_id);
