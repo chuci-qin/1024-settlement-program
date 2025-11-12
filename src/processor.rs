@@ -1,6 +1,6 @@
 //! Settlement Program Instruction Processing
 
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -109,7 +109,7 @@ fn process_record_settlement(
     };
     
     // 序列化
-    let serialized = borsh::to_vec(&account_data)
+    let serialized = account_data.try_to_vec()
         .map_err(|_| SettlementError::SerializationError)?;
     
     msg!("Settlement data size: {} bytes", serialized.len());

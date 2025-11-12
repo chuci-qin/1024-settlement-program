@@ -19,9 +19,10 @@ pub mod processor;
 pub mod state;
 pub mod utils;
 
-// 声明Program ID（部署后会更新为实际ID）
-// 临时使用占位符
-solana_program::declare_id!("Sett1ementProg11111111111111111111111111111");
+// Settlement Program ID (已部署到1024Chain Testnet)
+// 部署日期: 2025-11-12
+// Transaction: 3Zh7cVFJuhip56kU6y7z6HprjQvbM8iGJYkJGtAqUxjiw4ukUtvx2Aoeuf96GgnfuGPJF96pVFRvq76mFuRkvcmh
+solana_program::declare_id!("D1VtiVDF1iVojfVUpuyxkjixnYdr2cdwrakQgqJ5QJ7w");
 
 // Program入口点
 #[cfg(not(feature = "no-entrypoint"))]
