@@ -77,8 +77,14 @@ fn process_record_settlement(
     validate_batch_id(&data.batch_id)?;
     
     // 验证settlement account是正确的PDA
+    // 注意：batch_id是UUID（36字符），需要hash以符合32字节限制
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(data.batch_id.as_bytes());
+    let batch_hash = hasher.finalize();
+    
     let (expected_pda, bump) = Pubkey::find_program_address(
-        &[b"settlement", data.batch_id.as_bytes()],
+        &[b"settlement", &batch_hash[..32]],
         program_id,
     );
     
@@ -88,8 +94,8 @@ fn process_record_settlement(
         return Err(SettlementError::InvalidSettlementAccount.into());
     }
     
-    // 验证account不存在（防止重复）
-    if settlement_account.lamports() > 0 {
+    // 验证account不存在或为空（防止重复）
+    if settlement_account.lamports() > 0 && settlement_account.data_len() > 0 {
         msg!("Error: Settlement account already exists");
         return Err(SettlementError::AccountAlreadyExists.into());
     }
@@ -127,42 +133,20 @@ fn process_record_settlement(
         return Err(SettlementError::InsufficientLamports.into());
     }
     
-    // 创建settlement account
-    msg!("Creating settlement account (allocate + assign)...");
+    // 创建settlement account - 直接分配空间和转账
+    msg!("Creating settlement account...");
     
-    // 手动构建create_account instruction
-    // System Program ID是固定的
-    let system_program_id = solana_program::pubkey!("11111111111111111111111111111111");
+    // 从authority转账lamports到settlement account
+    **authority.lamports.borrow_mut() -= required_lamports;
+    **settlement_account.lamports.borrow_mut() += required_lamports;
     
-    // 创建instruction数据
-    let mut instruction_data = vec![0u8; 52]; // CreateAccount instruction
-    instruction_data[0..4].copy_from_slice(&[0, 0, 0, 0]); // instruction discriminator
-    instruction_data[4..12].copy_from_slice(&required_lamports.to_le_bytes());
-    instruction_data[12..20].copy_from_slice(&(serialized.len() as u64).to_le_bytes());
-    instruction_data[20..52].copy_from_slice(program_id.as_ref());
-    
-    let ix = solana_program::instruction::Instruction {
-        program_id: system_program_id,
-        accounts: vec![
-            solana_program::instruction::AccountMeta::new(*authority.key, true),
-            solana_program::instruction::AccountMeta::new(*settlement_account.key, false),
-        ],
-        data: instruction_data,
-    };
-    
-    invoke_signed(
-        &ix,
-        &[
-            authority.clone(),
-            settlement_account.clone(),
-            system_program.clone(),
-        ],
-        &[&[b"settlement", account_data.data.batch_id.as_bytes(), &[bump]]],
-    )?;
+    // 分配空间并设置owner
+    settlement_account.realloc(serialized.len(), false)?;
+    settlement_account.assign(program_id);
     
     // 写入数据
     let mut settlement_data = settlement_account.data.borrow_mut();
-    settlement_data[..serialized.len()].copy_from_slice(&serialized);
+    settlement_data.copy_from_slice(&serialized);
     
     msg!("✅ Settlement recorded successfully!");
     msg!("   Batch: {}", account_data.data.batch_id);
