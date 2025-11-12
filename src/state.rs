@@ -116,8 +116,8 @@ impl UserSettlement {
     pub const VERSION: u8 = 1;
     
     /// 固定大小（bytes）
-    /// 8 + 1 + 1 + 6 + 32 + 8*3 + 8*3 + 8*3 + 8*2 + 8*3 + 8*8 = 232 bytes
-    pub const SIZE: usize = 232;
+    /// 8 + 1 + 1 + 6 + 32 + 8*3 + 8*3 + 8*3 + 8*2 + 8*3 + 8*8 = 224 bytes
+    pub const SIZE: usize = 224;
     
     /// 创建新的UserSettlement（初始状态）
     pub fn new(wallet: Pubkey, bump: u8, first_trade_ts: i64) -> Self {
